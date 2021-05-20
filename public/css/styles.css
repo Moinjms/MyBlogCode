@@ -42,3 +42,10 @@ hr {
   width: 5%;
   border-top: 10px dotted silver;
 }
+
+body{
+  background-color: #E4E9FD;
+  /* background-image: -webkit-linear-gradient(65deg, #A683E3 50%, #E4E9FD 50%); */
+  /* min-height: 2050px; */
+  /* font-family: 'helvetica neue'; */
+}
