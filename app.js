@@ -1,9 +1,8 @@
-//jshint esversion:6
-
 const express = require("express");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const _ = require('lodash');
+const mongoose = require("mongoose");
 
 const homeStartingContent = "HOME Lacus vel facilisis volutpat est velit egestas dui id ornare. Semper auctor neque vitae tempus quam. Sit amet cursus sit amet dictum sit amet justo. Viverra tellus in hac habitasse. Imperdiet proin fermentum leo vel orci porta. Donec ultrices tincidunt arcu non sodales neque sodales ut. Mattis molestie a iaculis at erat pellentesque adipiscing. Magnis dis parturient montes nascetur ridiculus mus mauris vitae ultricies. Adipiscing elit ut aliquam purus sit amet luctus venenatis lectus. Ultrices vitae auctor eu augue ut lectus arcu bibendum at. Odio euismod lacinia at quis risus sed vulputate odio ut. Cursus mattis molestie a iaculis at erat pellentesque adipiscing.";
 const aboutContent = "ABOUT Hac habitasse platea dictumst vestibulum rhoncus est pellentesque. Dictumst vestibulum rhoncus est pellentesque elit ullamcorper. Non diam phasellus vestibulum lorem sed. Platea dictumst quisque sagittis purus sit. Egestas sed sed risus pretium quam vulputate dignissim suspendisse. Mauris in aliquam sem fringilla. Semper risus in hendrerit gravida rutrum quisque non tellus orci. Amet massa vitae tortor condimentum lacinia quis vel eros. Enim ut tellus elementum sagittis vitae. Mauris ultrices eros in cursus turpis massa tincidunt dui.";
@@ -11,24 +10,71 @@ const contactContent = "CONTACT Scelerisque eleifend donec pretium vulputate sap
 
 const app = express();
 const today = new Date();
-let posts = [];
+
+
+const postSchema = {
+  title: String,
+  content: String,
+  date: String,
+  postedby: String
+};
+
+//connect Mongo Database
+mongoose.connect("mongodb://localhost:27017/blogDB", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}, function(err) {
+  if (err) {
+    console.log(err);
+  } else {
+    console.log("successfully connected to the database");
+  }
+});
+//** Schema Mongoose
+const Post = mongoose.model("Post", postSchema);
 
 app.set('view engine', 'ejs');
-
 app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(express.static("public"));
 
+// ***** GET HOME Route
 app.get("/", function(req, res) {
-  // console.log(posts);
-  res.render("home", {
-    para1: homeStartingContent,
-    posts: posts,
-    todaysDate: today
-  });
+  Post.find({}, function(err, posts) {
+    //console.log(posts+ "********");
+    res.render("home", {
+      para1: homeStartingContent,
+      posts: posts,
+      todaysDate: today
+    });
+  })
 });
 
+app.get("/posts/:postId", function(req, res) {
+
+  const requestedPostId = req.params.postId;
+
+  Post.findOne({
+    _id: requestedPostId
+  }, function(err, post) {
+
+    if (!err) {
+      res.render("post", {
+        title: post.title,
+        content: post.content,
+        date: post.date,
+        postedby: post.postedby
+      });
+    } else {
+      console.log(err);
+    }
+
+  });
+
+});
+
+//***********************************************
 app.get("/about", function(req, res) {
   res.render("about", {
     para1: aboutContent
@@ -41,36 +87,28 @@ app.get("/contact", function(req, res) {
   });
 });
 
+// Compose Get
 app.get("/compose", function(req, res) {
   res.render("compose");
+
 });
 
+// ** POST  Saving the Composed Post to DB
 app.post("/compose", function(req, res) {
-  const post = {
+  const post = new Post({
     title: req.body.postTitle,
-    content: req.body.postText
-  };
-  posts.push(post);
-  res.redirect("/");
-});
-
-// Calling using params
-//************************************************
-// app.get("/a/:x", function(req, res) {
-//************************************************
-app.get("/posts/:postPage", function(req, res) {
-  const newPage = _.lowerCase(req.params.postPage);
-  posts.forEach(function(post) {
-    if (newPage === _.lowerCase(post.title)) {
-      res.render("post", {
-        title: post.title,
-        content: post.content
-      });
-    };
+    content: req.body.postText,
+    date: today,
+    postedby: req.body.postedby
+  });
+  post.save(function(err) {
+    if (!err) {
+      res.redirect("/");
+    }
   });
 });
 // ***********************************************
 
 app.listen(3000, function() {
-  console.log("Server started on port 3000");
+  console.log("Moin... Server started on port 3000..." + today);
 });
